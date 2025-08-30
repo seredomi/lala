@@ -5,6 +5,6 @@
 2nd goal is to transcribe that into sheet music
 
 ## stack
-frontend: ts, react (tauri)
+frontend: typescript, react, carbon (tauri)
 
 backend: tauri, rust, demucs
