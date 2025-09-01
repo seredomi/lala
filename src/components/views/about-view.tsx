@@ -1,6 +1,6 @@
 import { Link, Stack } from "@carbon/react";
 import { Text } from "@carbon/react/lib/components/Text";
-import { openPath, openUrl } from "@tauri-apps/plugin-opener";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 export const AboutView = () => {
   return (
