@@ -8,6 +8,17 @@
     "opener:default",
     "process:default",
     "core:window:default",
-    "core:window:allow-start-dragging"
+    "core:window:allow-start-dragging",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://github.com/seredomi"
+        },
+        {
+          "url": "custom:*"
+        }
+      ]
+    }
   ]
 }
