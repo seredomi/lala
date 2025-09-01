@@ -1,6 +1,6 @@
 use crate::dsp::{istft, stft};
 use anyhow::{anyhow, Result};
-use ndarray::{Array, Array2, Array3, Axis}; // Removed unused 's'
+use ndarray::{Array, Array2, Array3, Axis};
 use ort::session::Session;
 use ort::value::Value;
 use std::collections::HashMap;
@@ -53,9 +53,9 @@ impl Separator {
         )?;
 
         // 1. Perform STFT on the mixture (use only first channel for now)
-        // Create an owned 2D array from the first channel
         let mono_mixture =
             Array2::from_shape_vec((1, mixture.shape()[1]), mixture.row(0).to_vec())?;
+
         let mixture_stft = stft(&mono_mixture);
         let mixture_phase = mixture_stft.mapv(|c| c.arg());
 
@@ -72,7 +72,8 @@ impl Separator {
         let shape = mixture_stft.shape();
         let n_freq_bins = shape[0];
         let total_time_frames = shape[1];
-        let n_chunks = (total_time_frames + MODEL_TIME_FRAMES - 1) / MODEL_TIME_FRAMES; // Ceiling division
+
+        let n_chunks = (total_time_frames + MODEL_TIME_FRAMES - 1) / MODEL_TIME_FRAMES;
 
         // Initialize output arrays for all stems
         let mut all_stems_output =
@@ -90,13 +91,9 @@ impl Separator {
             for freq_idx in 0..std::cmp::min(n_freq_bins, MODEL_FREQ_BINS) {
                 for time_idx in 0..chunk_size {
                     let complex_val = mixture_stft[[freq_idx, start_frame + time_idx]];
-                    // Channel 0: real part of left channel
                     model_input[[0, 0, freq_idx, time_idx]] = complex_val.re;
-                    // Channel 1: imaginary part of left channel
                     model_input[[0, 1, freq_idx, time_idx]] = complex_val.im;
-                    // Channel 2: real part of right channel (duplicate for stereo)
                     model_input[[0, 2, freq_idx, time_idx]] = complex_val.re;
-                    // Channel 3: imaginary part of right channel
                     model_input[[0, 3, freq_idx, time_idx]] = complex_val.im;
                 }
             }
@@ -111,26 +108,40 @@ impl Separator {
             let input_value = Value::from_array((tensor_shape, data))?;
             let outputs = self.session.run(ort::inputs!["input" => input_value])?;
 
-            // Extract output for this chunk
+            // Extract output for this chunk with debug info
             let output_tensor = outputs["output"].try_extract_tensor::<f32>()?;
             let (output_shape, output_data) = output_tensor;
 
+            if chunk_idx == 0 {
+                println!("Output tensor shape: {:?}", output_shape);
+                println!("Output data length: {}", output_data.len());
+            }
+
             let chunk_output = Array::from_shape_vec(
                 (
-                    output_shape[0] as usize,
-                    output_shape[1] as usize,
-                    output_shape[2] as usize,
-                    output_shape[3] as usize,
+                    output_shape[0] as usize, // batch
+                    output_shape[1] as usize, // stems
+                    output_shape[2] as usize, // channels
+                    output_shape[3] as usize, // freq_bins
+                    output_shape[4] as usize, // time_frames
                 ),
                 output_data.to_vec(),
             )?;
 
+            if chunk_idx == 0 {
+                println!("Chunk output array shape: {:?}", chunk_output.shape());
+            }
+
             // Copy this chunk's output to the full output arrays
             for stem_idx in 0..STEMS.len() {
-                for freq_idx in 0..std::cmp::min(output_shape[2] as usize, n_freq_bins) {
+                for freq_idx in 0..std::cmp::min(output_shape[3] as usize, n_freq_bins) {
                     for time_idx in 0..chunk_size {
-                        all_stems_output[[stem_idx, freq_idx, start_frame + time_idx]] =
-                            chunk_output[[0, stem_idx, freq_idx, time_idx]];
+                        // reconstruct complex number from real/imaginary parts (using first 2 channels)
+                        let real_part = chunk_output[[0, stem_idx, 0, freq_idx, time_idx]];
+                        let imag_part = chunk_output[[0, stem_idx, 1, freq_idx, time_idx]];
+                        let magnitude = (real_part * real_part + imag_part * imag_part).sqrt();
+
+                        all_stems_output[[stem_idx, freq_idx, start_frame + time_idx]] = magnitude;
                     }
                 }
             }
@@ -145,6 +156,10 @@ impl Separator {
                     progress: Some(progress),
                 },
             )?;
+
+            if chunk_idx == 0 {
+                println!("Completed chunk 0 successfully");
+            }
         }
 
         // 3. Reconstruct waveforms using iSTFT
@@ -157,10 +172,18 @@ impl Separator {
             },
         )?;
 
+        println!("Starting iSTFT reconstruction...");
         let mut final_stems = HashMap::new();
         for (stem_idx, stem_name) in STEMS.iter().enumerate() {
+            println!("Processing stem: {}", stem_name);
             let stem_magnitudes = all_stems_output.index_axis(Axis(0), stem_idx);
+            println!("Stem magnitudes shape: {:?}", stem_magnitudes.shape());
+
             let stem_waveform_mono = istft(stem_magnitudes.to_owned(), &mixture_phase, n_samples);
+            println!(
+                "Reconstructed waveform shape: {:?}",
+                stem_waveform_mono.shape()
+            );
 
             // Create stereo output
             let mut stem_waveform_stereo = Array2::zeros((2, n_samples));
@@ -170,6 +193,7 @@ impl Separator {
             final_stems.insert(stem_name.to_string(), stem_waveform_stereo);
         }
 
+        println!("Separation completed successfully!");
         Ok(final_stems)
     }
 }
