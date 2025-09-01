@@ -1,5 +1,8 @@
+mod audio_io;
 mod config;
+mod dsp;
 mod separation;
+mod separator;
 
 use config::get_app_config;
 use separation::{abort_separation, start_separation};
