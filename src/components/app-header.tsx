@@ -6,14 +6,7 @@ import {
   Theme,
   Tooltip,
 } from "@carbon/react";
-import {
-  CloseLarge,
-  DownToBottom,
-  Information,
-  Maximize,
-  Minimize,
-  UpToTop,
-} from "@carbon/icons-react";
+import { Close, DownToBottom, Information, UpToTop } from "@carbon/icons-react";
 import { exit } from "@tauri-apps/plugin-process";
 import { useStore } from "../utils/store";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -35,7 +28,7 @@ export const AppHeader = () => {
             data-tauri-drag-region
             onClick={() => setCurrentView("about")}
           >
-            <Information size={18} />
+            <Information size={15} />
           </HeaderGlobalAction>
           <HeaderGlobalAction
             data-tauri-drag-region
@@ -51,7 +44,7 @@ export const AppHeader = () => {
           </HeaderGlobalAction>
           <Tooltip label="close app">
             <HeaderGlobalAction data-tauri-drag-region onClick={() => exit(0)}>
-              <CloseLarge size={20} />
+              <Close size={20} />
             </HeaderGlobalAction>
           </Tooltip>
         </HeaderGlobalBar>
