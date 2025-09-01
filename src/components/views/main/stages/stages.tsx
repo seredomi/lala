@@ -5,6 +5,7 @@ import { ErrorView } from "../../error-view";
 import { ProgressIndicator, ProgressStep, Stack } from "@carbon/react";
 import { useStore } from "../../../../utils/store";
 import { UploadStage } from "./upload";
+import { SeparateStage } from "./separate";
 
 type StageConfig = {
   label: string;
@@ -13,12 +14,12 @@ type StageConfig = {
 
 const stages: Record<CurrentStage, StageConfig> = {
   upload: {
-    label: "upload audio file",
+    label: "upload a song",
     component: <UploadStage />,
   },
   separate: {
     label: "separate vocals from piano",
-    component: <AboutView />,
+    component: <SeparateStage />,
   },
   transcribe: {
     label: "transcribe to sheet music",

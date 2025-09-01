@@ -39,7 +39,7 @@ export const UploadStage = () => {
   return (
     <Stack>
       <div style={{ minHeight: "14rem" }}>
-        <h4 style={{ fontWeight: 800 }}>upload audio file</h4>
+        <h4 style={{ fontWeight: 800 }}>upload a song</h4>
         <p
           style={{ fontStyle: "italic", fontSize: 14, marginTop: "1rem" }}
         >{`max file size: ${appConfig?.file_upload?.max_file_size_mb || ""} MB`}</p>
@@ -62,7 +62,7 @@ export const UploadStage = () => {
             }}
             kind={uploadedFile ? "tertiary" : "primary"}
           >
-            {`${uploadedFile ? "change" : "choose"} song`}
+            {`${uploadedFile ? "change" : "choose"} file`}
           </Button>
           {uploadedFile && (
             <DismissibleTag
@@ -85,7 +85,7 @@ export const UploadStage = () => {
           maxHeight: "3rem",
         }}
       >
-        next
+        separate
       </Button>
     </Stack>
   );
