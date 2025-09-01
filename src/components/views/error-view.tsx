@@ -1,3 +1,3 @@
 export const ErrorView = () => {
-  return <title>Error</title>;
+  return <h4 style={{ fontWeight: 800 }}>error</h4>;
 };
