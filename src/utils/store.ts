@@ -9,8 +9,6 @@ import {
 } from "./schema";
 import { defaultAppConfig } from "./config";
 import { toast } from "./utils";
-import { FluidSelectSkeletonProps } from "@carbon/react/lib/components/FluidSelect";
-import { sep } from "@tauri-apps/api/path";
 
 interface AppStore {
   currentView: CurrentView;

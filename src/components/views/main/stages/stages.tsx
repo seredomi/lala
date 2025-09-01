@@ -42,7 +42,7 @@ export const Stages = () => {
   return (
     <Stack orientation="vertical" style={{ width: "25rem", height: "20rem" }}>
       <ProgressIndicator>
-        {Object.keys(stages).map((stage, index) => {
+        {Object.keys(stages).map((stage) => {
           const stg = stage as CurrentStage;
 
           return (
