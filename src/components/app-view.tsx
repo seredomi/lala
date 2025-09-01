@@ -4,7 +4,7 @@ import { MainView } from "./views/main/main-view";
 import { AboutView } from "./views/about-view";
 import { ErrorView } from "./views/error-view";
 import { useStore } from "../utils/store";
-import { Tile } from "@carbon/react";
+import { Theme, Tile } from "@carbon/react";
 
 export const viewMap: Record<CurrentView, ReactNode> = {
   main: <MainView />,
@@ -16,19 +16,21 @@ export const AppView = () => {
   const { currentView } = useStore();
 
   return (
-    <Tile
-      style={{
-        overflowY: "auto",
-        overscrollBehavior: "contain",
-        height: "100vh",
-        paddingTop: "5rem",
-        display: "flex",
-        flexDirection: "column",
-        justifyItems: "center",
-        alignItems: "center",
-      }}
-    >
-      {viewMap[currentView]}
-    </Tile>
+    <Theme theme="g10">
+      <div
+        style={{
+          overflowY: "auto",
+          overscrollBehavior: "contain",
+          height: "100vh",
+          paddingTop: "5rem",
+          display: "flex",
+          flexDirection: "column",
+          justifyItems: "center",
+          alignItems: "center",
+        }}
+      >
+        {viewMap[currentView]}
+      </div>
+    </Theme>
   );
 };

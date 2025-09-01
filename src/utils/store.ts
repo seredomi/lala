@@ -5,6 +5,7 @@ import {
   LoadingState,
   ErrorState,
   CurrentView,
+  CurrentStage,
 } from "./schema";
 import { defaultAppConfig } from "./config";
 import { toast } from "./utils";
@@ -13,8 +14,14 @@ interface AppStore {
   currentView: CurrentView;
   setCurrentView: (view: CurrentView) => void;
 
+  currentStage: CurrentStage;
+  setCurrentStage: (stage: CurrentStage) => void;
+
   appConfig: AppConfig;
   setAppConfig: (config: unknown) => void;
+
+  uploadedFile: string | null;
+  setUploadedFile: (val: string | null) => void;
 
   loadingState: LoadingState | null;
   setLoading: (loading: LoadingState | null) => void;
@@ -30,6 +37,9 @@ interface AppStore {
 export const useStore = create<AppStore>((set) => ({
   currentView: "main",
   setCurrentView: (view) => set({ currentView: view }),
+
+  currentStage: "upload",
+  setCurrentStage: (stage) => set({ currentStage: stage }),
 
   appConfig: defaultAppConfig,
   setAppConfig: (unknownConfig) => {
@@ -50,6 +60,9 @@ export const useStore = create<AppStore>((set) => ({
       });
     }
   },
+
+  uploadedFile: null,
+  setUploadedFile: (val) => set({ uploadedFile: val }),
 
   loadingState: null,
   setLoading: (loading) => set({ loadingState: loading }),
