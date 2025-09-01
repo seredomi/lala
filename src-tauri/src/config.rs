@@ -2,9 +2,9 @@ use serde::Serialize;
 
 #[derive(Serialize, Clone)]
 pub struct FileUploadConfig {
-    pub max_file_size_mb: u16,
+    pub max_file_size_mb: u32,
     pub permitted_file_types: [&'static str; 1],
-    pub max_upload_time_sec: u32,
+    pub max_upload_time_sec: u16,
 }
 
 #[derive(Serialize, Clone)]

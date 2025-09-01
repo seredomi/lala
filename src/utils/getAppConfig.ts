@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { AppConfig } from "./types";
+import { AppConfig } from "./schema";
 
 export const getAppConfig = async () => {
   let config: AppConfig;
