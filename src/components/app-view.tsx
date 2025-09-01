@@ -4,7 +4,7 @@ import { MainView } from "./views/main/main-view";
 import { AboutView } from "./views/about-view";
 import { ErrorView } from "./views/error-view";
 import { useStore } from "../utils/store";
-import { Theme, Tile } from "@carbon/react";
+import { Theme } from "@carbon/react";
 
 export const viewMap: Record<CurrentView, ReactNode> = {
   main: <MainView />,

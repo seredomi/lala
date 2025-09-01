@@ -1,27 +1,9 @@
-import {
-  ActionableNotification,
-  Button,
-  Callout,
-  DismissibleTag,
-  FileUploader,
-  Stack,
-  Tag,
-} from "@carbon/react";
-import { AudioFileUploader } from "../file-uploader";
-import {
-  ArrowRight,
-  DocumentAdd,
-  DocumentImport,
-  FileStorage,
-  NextOutline,
-  Restart,
-  Upload,
-  ViewNext,
-} from "@carbon/icons-react";
+import { Button, DismissibleTag, Stack } from "@carbon/react";
+import { ArrowRight, DocumentAdd, DocumentImport } from "@carbon/icons-react";
 import { useStore } from "../../../../utils/store";
-import { useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { toast } from "../../../../utils/utils";
+import { relaunch } from "@tauri-apps/plugin-process";
 
 export const UploadStage = () => {
   const { setCurrentStage, appConfig, uploadedFile, setUploadedFile } =
@@ -47,7 +29,9 @@ export const UploadStage = () => {
       toast({
         kind: "error",
         title: "unable to open file",
-        subtitle: error?.message || "maybe try again",
+        subtitle: "try again, or try restarting the app",
+        actionButtonLabel: "restart app",
+        onActionButtonClick: () => relaunch(),
       });
     }
   };

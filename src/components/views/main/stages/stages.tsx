@@ -1,7 +1,6 @@
-import { FC, ReactNode } from "react";
+import { ReactNode } from "react";
 import { CurrentStage } from "../../../../utils/schema";
 import { AboutView } from "../../about-view";
-import { AudioFileUploader } from "../file-uploader";
 import { ErrorView } from "../../error-view";
 import { ProgressIndicator, ProgressStep, Stack } from "@carbon/react";
 import { useStore } from "../../../../utils/store";
