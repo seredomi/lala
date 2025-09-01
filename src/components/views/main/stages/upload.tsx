@@ -4,6 +4,8 @@ import { useStore } from "../../../../utils/store";
 import { open } from "@tauri-apps/plugin-dialog";
 import { toast } from "../../../../utils/utils";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { invoke } from "@tauri-apps/api/core";
+import { startSeparation } from "../../../../utils/separation";
 
 export const UploadStage = () => {
   const { setCurrentStage, appConfig, uploadedFile, setUploadedFile } =
@@ -30,6 +32,7 @@ export const UploadStage = () => {
         kind: "error",
         title: "unable to open file",
         subtitle: "try again, or try restarting the app",
+        caption: String(error) || undefined,
         actionButtonLabel: "restart app",
         onActionButtonClick: () => relaunch(),
       });
@@ -78,10 +81,9 @@ export const UploadStage = () => {
       <Button
         renderIcon={ArrowRight}
         disabled={!uploadedFile}
-        onClick={() => setCurrentStage("separate")}
+        onClick={startSeparation}
         style={{
           justifySelf: "flex-end",
-          alignSelf: "fex-end",
           maxHeight: "3rem",
         }}
       >

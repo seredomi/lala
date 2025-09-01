@@ -1,37 +1,46 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { CurrentStage } from "../../../../utils/schema";
-import { AboutView } from "../../about-view";
-import { ErrorView } from "../../error-view";
 import { ProgressIndicator, ProgressStep, Stack } from "@carbon/react";
 import { useStore } from "../../../../utils/store";
 import { UploadStage } from "./upload";
 import { SeparateStage } from "./separate";
+import { TranscribeStage } from "./tanscribe";
 
 type StageConfig = {
   label: string;
   component: ReactNode;
-};
-
-const stages: Record<CurrentStage, StageConfig> = {
-  upload: {
-    label: "upload a song",
-    component: <UploadStage />,
-  },
-  separate: {
-    label: "separate vocals from piano",
-    component: <SeparateStage />,
-  },
-  transcribe: {
-    label: "transcribe to sheet music",
-    component: <ErrorView />,
-  },
+  complete: boolean;
 };
 
 export const Stages = () => {
-  const { currentStage, setCurrentStage } = useStore();
+  const { currentStage, setCurrentStage, uploadedFile, separationProgress } =
+    useStore();
+
+  useEffect(() => {
+    console.log("sp", separationProgress);
+  }, [separationProgress]);
+
+  const stages: Record<CurrentStage, StageConfig> = {
+    upload: {
+      label: "upload a song",
+      component: <UploadStage />,
+      complete: Boolean(uploadedFile),
+    },
+    separate: {
+      label: "separate vocals from piano",
+      component: <SeparateStage />,
+      complete:
+        separationProgress?.progress == 100 || currentStage === "transcribe",
+    },
+    transcribe: {
+      label: "transcribe to sheet music",
+      component: <TranscribeStage />,
+      complete: false,
+    },
+  };
 
   return (
-    <Stack orientation="vertical">
+    <Stack orientation="vertical" style={{ width: "25rem", height: "20rem" }}>
       <ProgressIndicator>
         {Object.keys(stages).map((stage, index) => {
           const stg = stage as CurrentStage;
@@ -44,7 +53,7 @@ export const Stages = () => {
               secondaryLabel={stages[stg].label}
               description={stages[stg].label}
               onClick={() => setCurrentStage(stg)}
-              complete={Object.keys(stages).indexOf(currentStage) > index}
+              complete={stages[stg].complete}
             />
           );
         })}
