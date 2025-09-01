@@ -37,8 +37,8 @@ export const UploadStage = () => {
   };
 
   return (
-    <Stack style={{ minHeight: "20rem" }}>
-      <div style={{ minHeight: "15rem" }}>
+    <Stack>
+      <div style={{ minHeight: "14rem" }}>
         <h4 style={{ fontWeight: 800 }}>upload audio file</h4>
         <p
           style={{ fontStyle: "italic", fontSize: 14, marginTop: "1rem" }}
