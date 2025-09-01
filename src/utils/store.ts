@@ -9,6 +9,8 @@ import {
 } from "./schema";
 import { defaultAppConfig } from "./config";
 import { toast } from "./utils";
+import { FluidSelectSkeletonProps } from "@carbon/react/lib/components/FluidSelect";
+import { sep } from "@tauri-apps/api/path";
 
 interface AppStore {
   currentView: CurrentView;
@@ -22,6 +24,9 @@ interface AppStore {
 
   uploadedFile: string | null;
   setUploadedFile: (val: string | null) => void;
+
+  separationProgress: LoadingState | null;
+  setSeparationProgress: (progress: LoadingState | null) => void;
 
   loadingState: LoadingState | null;
   setLoading: (loading: LoadingState | null) => void;
@@ -62,7 +67,11 @@ export const useStore = create<AppStore>((set) => ({
   },
 
   uploadedFile: null,
-  setUploadedFile: (val) => set({ uploadedFile: val }),
+  setUploadedFile: (val) =>
+    set({ uploadedFile: val, separationProgress: null }),
+
+  separationProgress: null,
+  setSeparationProgress: (val) => set({ separationProgress: val }),
 
   loadingState: null,
   setLoading: (loading) => set({ loadingState: loading }),
