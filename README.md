@@ -1,7 +1,10 @@
-# Tauri + React + Typescript
+# lala
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+1st goal is to make an interface to separate vocals from accompaniment in songs
 
-## Recommended IDE Setup
+2nd goal is to transcribe that accompaniment into sheet music
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+## stack
+frontend: typescript, react, carbon (tauri)
+
+backend: tauri, rust, demucs
