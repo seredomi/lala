@@ -1,9 +1,21 @@
 # lala
 
-1st goal is to make an interface to separate vocals from accompaniment in songs
-
-2nd goal is to transcribe that accompaniment into sheet music
+## goal
+create a tool to remove vocals from audio tracks. specifically some [moondog](https://en.wikipedia.org/wiki/Moondog) songs I really love. if that works, maybe I can convert them into sheet music. we'll see
 
 ## stack
-frontend: tauri, typescript, react, carbon
-backend: rust, demucs
+**frontend**:
+- [tauri](https://v2.tauri.app/)
+- [typescript](https://www.typescriptlang.org/)
+- [react](https://react.dev/)
+- [carbon](https://carbondesignsystem.com/)
+
+**backend**:
+- [rust](https://www.rust-lang.org/)
+- [onnx](https://onnx.ai/)
+- [demucs](https://github.com/facebookresearch/demucs)
+
+## progress
+- [x] upload song
+- [ ] separate tracks
+- [ ] transcribe instrumental

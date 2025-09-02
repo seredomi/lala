@@ -1,8 +1,11 @@
+mod audio_io;
 mod config;
+mod dsp;
 mod separation;
+mod separator;
 
 use config::get_app_config;
-use separation::{abort_separation, start_separation};
+use separation::{abort_separation, download_stem, start_separation};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -13,7 +16,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_app_config,
             start_separation,
-            abort_separation
+            abort_separation,
+            download_stem
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

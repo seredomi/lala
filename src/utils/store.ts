@@ -3,7 +3,6 @@ import {
   AppConfig,
   AppConfigSchema,
   LoadingState,
-  ErrorState,
   CurrentView,
   CurrentStage,
 } from "./schema";
@@ -20,21 +19,17 @@ interface AppStore {
   appConfig: AppConfig;
   setAppConfig: (config: unknown) => void;
 
-  uploadedFile: string | null;
-  setUploadedFile: (val: string | null) => void;
+  selectedFilepath: string | null;
+  setSelectedFilepath: (val: string | null) => void;
+
+  availableStems: string[];
+  setAvailableStems: (stems: string[]) => void;
 
   separationProgress: LoadingState | null;
   setSeparationProgress: (progress: LoadingState | null) => void;
 
-  loadingState: LoadingState | null;
-  setLoading: (loading: LoadingState | null) => void;
-  clearLoading: () => void;
-
-  errorState: ErrorState | null;
-  setError: (error: ErrorState | null) => void;
-  clearError: () => void;
-
-  clearAll: () => void;
+  downloadProgress: LoadingState | null;
+  setDownloadProgress: (progress: LoadingState | null) => void;
 }
 
 export const useStore = create<AppStore>((set) => ({
@@ -64,24 +59,21 @@ export const useStore = create<AppStore>((set) => ({
     }
   },
 
-  uploadedFile: null,
-  setUploadedFile: (val) =>
-    set({ uploadedFile: val, separationProgress: null }),
+  selectedFilepath: null,
+  setSelectedFilepath: (val) =>
+    set({
+      selectedFilepath: val,
+      separationProgress: null,
+      downloadProgress: null,
+      availableStems: [],
+    }),
+
+  availableStems: [],
+  setAvailableStems: (stems) => set({ availableStems: stems }),
 
   separationProgress: null,
   setSeparationProgress: (val) => set({ separationProgress: val }),
 
-  loadingState: null,
-  setLoading: (loading) => set({ loadingState: loading }),
-  clearLoading: () => set({ loadingState: null }),
-
-  errorState: null,
-  setError: (error) => set({ errorState: error }),
-  clearError: () => set({ errorState: null }),
-
-  clearAll: () =>
-    set({
-      loadingState: null,
-      errorState: null,
-    }),
+  downloadProgress: null,
+  setDownloadProgress: (val) => set({ downloadProgress: val }),
 }));

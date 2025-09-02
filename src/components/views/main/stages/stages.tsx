@@ -13,8 +13,12 @@ type StageConfig = {
 };
 
 export const Stages = () => {
-  const { currentStage, setCurrentStage, uploadedFile, separationProgress } =
-    useStore();
+  const {
+    currentStage,
+    setCurrentStage,
+    selectedFilepath,
+    separationProgress,
+  } = useStore();
 
   useEffect(() => {
     console.log("sp", separationProgress);
@@ -24,7 +28,7 @@ export const Stages = () => {
     upload: {
       label: "upload a song",
       component: <UploadStage />,
-      complete: Boolean(uploadedFile),
+      complete: Boolean(selectedFilepath),
     },
     separate: {
       label: "separate vocals from piano",

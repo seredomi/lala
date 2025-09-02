@@ -1,20 +1,30 @@
-import { Button, ProgressBar, Stack } from "@carbon/react";
+import { Button, Loading, ProgressBar, Stack } from "@carbon/react";
 import { useStore } from "../../../../utils/store";
 import { ArrowLeft, ArrowRight, Download, Renew } from "@carbon/icons-react";
-import { abortSeparation, startSeparation } from "../../../../utils/separation";
+import {
+  abortSeparation,
+  downloadStem,
+  startSeparation,
+} from "../../../../utils/separation";
 
 export const SeparateStage = () => {
-  const { setCurrentStage, separationProgress, setSeparationProgress } =
-    useStore();
+  const {
+    setCurrentStage,
+    separationProgress,
+    setSeparationProgress,
+    availableStems,
+    downloadProgress,
+  } = useStore();
 
   const proceedToTranscribe = () => {
     setCurrentStage("transcribe");
   };
 
-  const downloadSongs = () => {
-    // TODO: Implement download functionality
-    console.log("Downloading separated songs...");
+  const handleDownloadStem = async (stemName: string) => {
+    await downloadStem(stemName);
   };
+
+  const isDownloading = downloadProgress && downloadProgress.progress !== 100;
 
   return (
     <Stack>
@@ -44,16 +54,22 @@ export const SeparateStage = () => {
                 style={{
                   display: "flex",
                   justifyContent: "flex-end",
+                  gap: "1rem",
                   marginTop: "2rem",
+                  flexWrap: "wrap",
                 }}
               >
-                <Button
-                  renderIcon={Download}
-                  kind="tertiary"
-                  onClick={downloadSongs}
-                >
-                  download tracks
-                </Button>
+                {availableStems.map((stemName) => (
+                  <Button
+                    key={stemName}
+                    renderIcon={isDownloading ? Loading : Download}
+                    kind="tertiary"
+                    onClick={() => handleDownloadStem(stemName)}
+                    disabled={isDownloading || false}
+                  >
+                    {stemName}
+                  </Button>
+                ))}
               </div>
             )}
           </div>
@@ -96,7 +112,7 @@ export const SeparateStage = () => {
             </Button>
           ) : (
             <Button
-              kind="danger--tertiary"
+              kind="danger"
               onClick={abortSeparation}
               style={{ marginLeft: "auto" }}
             >
