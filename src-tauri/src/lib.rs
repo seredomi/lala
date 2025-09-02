@@ -1,6 +1,6 @@
 mod audio_io;
 mod config;
-mod dsp;
+mod demucs_model;
 mod separation;
 mod separator;
 
