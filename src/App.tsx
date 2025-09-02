@@ -7,7 +7,8 @@ import { LoadingState } from "./utils/schema";
 import { listen } from "@tauri-apps/api/event";
 
 function App() {
-  const { setAppConfig, setSeparationProgress } = useStore();
+  const { setAppConfig, setSeparationProgress, setDownloadProgress } =
+    useStore();
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -18,14 +19,21 @@ function App() {
   }, [setAppConfig]);
 
   useEffect(() => {
-    const unlisten = listen<LoadingState>("separation_progress", (event) => {
-      setSeparationProgress(event.payload);
-    });
+    const unlistenSeparation = listen<LoadingState>(
+      "separation_progress",
+      (event) => setSeparationProgress(event.payload),
+    );
+
+    const unlistenDownload = listen<LoadingState>(
+      "download_progress",
+      (event) => setDownloadProgress(event.payload),
+    );
 
     return () => {
-      unlisten.then((fn) => fn());
+      unlistenSeparation.then((fn) => fn());
+      unlistenDownload.then((fn) => fn());
     };
-  }, [setSeparationProgress]);
+  }, [setSeparationProgress, setDownloadProgress]);
 
   return (
     <>
