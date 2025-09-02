@@ -7,7 +7,7 @@ import { relaunch } from "@tauri-apps/plugin-process";
 import { startSeparation } from "../../../../utils/separation";
 
 export const UploadStage = () => {
-  const { appConfig, uploadedFile, setUploadedFile } = useStore();
+  const { appConfig, selectedFilepath, setSelectedFilepath } = useStore();
 
   const selectFile = async () => {
     try {
@@ -23,7 +23,7 @@ export const UploadStage = () => {
         ],
       });
 
-      if (path) setUploadedFile(path);
+      if (path) setSelectedFilepath(path);
     } catch (error) {
       console.error("unable to open file: ", error);
       toast({
@@ -55,30 +55,32 @@ export const UploadStage = () => {
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <Button
-            renderIcon={uploadedFile ? DocumentImport : DocumentAdd}
+            renderIcon={selectedFilepath ? DocumentImport : DocumentAdd}
             onClick={selectFile}
             style={{
               marginTop: "0.5rem",
               minWidth: "10rem",
             }}
-            kind={uploadedFile ? "tertiary" : "primary"}
+            kind={selectedFilepath ? "tertiary" : "primary"}
           >
-            {`${uploadedFile ? "change" : "choose"} file`}
+            {`${selectedFilepath ? "change" : "choose"} file`}
           </Button>
-          {uploadedFile && (
-            <DismissibleTag
-              size="lg"
-              onClose={() => setUploadedFile(null)}
-              text={uploadedFile.split("/").pop()}
-              dismissTooltipLabel="remove song"
-            />
+          {selectedFilepath && (
+            <div>
+              <DismissibleTag
+                size="lg"
+                onClose={() => setSelectedFilepath(null)}
+                text={selectedFilepath.split("/").pop()}
+                dismissTooltipLabel="remove song"
+              />
+            </div>
           )}
         </div>
       </div>
 
       <Button
         renderIcon={ArrowRight}
-        disabled={!uploadedFile}
+        disabled={!selectedFilepath}
         onClick={startSeparation}
         style={{
           justifySelf: "flex-end",
