@@ -49,9 +49,7 @@ export const UploadStage = () => {
         >
           {`supported file types: ${(
             appConfig?.file_upload?.permitted_file_extensions || []
-          )
-            .map((str) => `.${str} `)
-            .join("")} `}
+          ).join(" ")} `}
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <Button
