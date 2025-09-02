@@ -157,6 +157,6 @@ pub fn abort_separation() -> Result<(), String> {
         handle.abort_flag.store(true, Ordering::SeqCst);
         Ok(())
     } else {
-        Err("No separation in progress to abort.".into())
+        Err("no separation to cancel".into())
     }
 }

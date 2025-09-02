@@ -30,10 +30,11 @@ export const startSeparation = async () => {
     setCurrentStage("separate");
     return true;
   } catch (error) {
-    console.error("failed to start separation:", error);
+    console.error("failed to separate:", error);
+    console.error(String(error));
     toast({
       kind: "error",
-      title: "failed to start separation",
+      title: "failed to separate ",
       subtitle: "try again, or try restarting the app",
       caption: String(error) || undefined,
       actionButtonLabel: "restart app",
@@ -44,11 +45,18 @@ export const startSeparation = async () => {
 };
 
 export const abortSeparation = async () => {
+  const { separationProgress, setSeparationProgress } = useStore.getState();
   try {
     await invoke("abort_separation");
     return true;
   } catch (error) {
-    console.error("failed to cancel separation:", error);
+    if (String(error) === "no separation to cancel")
+      setSeparationProgress({
+        title: "cancelled",
+        description: "separation successfully cancelled",
+        progress: 0,
+      });
+    console.error("failed to cancel:", error);
     toast({
       kind: "error",
       title: "error",
