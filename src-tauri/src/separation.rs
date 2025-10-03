@@ -49,9 +49,9 @@ pub async fn start_separation(app: AppHandle, file_path: String) -> Result<Vec<S
     app.emit(
         "separation_progress",
         &LoadingState {
-            title: "separating...".to_string(),
-            description: "running Demucs model".to_string(),
-            progress: Some(40),
+            title: "running Demucs model...".to_string(),
+            description: "initiating".to_string(),
+            progress: Some(10),
         },
     )
     .map_err(|e| format!("{:?}", e))?;
@@ -59,13 +59,22 @@ pub async fn start_separation(app: AppHandle, file_path: String) -> Result<Vec<S
     // Load model and run separation
     // let path = env::current_dir();
     println!("The current directory is {:?}", env::current_dir());
-    let model_path = Path::new("../models/hdemucs_high_musdb_plus.pt");
-    // let model_path = Path::new("models/hdemucs_high_musdb_plus.pt");
+    let model_path = Path::new("../models/hdemucs.pt");
     let demucs =
         DemucsModel::new(model_path).map_err(|e| format!("failed to load model: {:?}", e))?;
+    let mut last_progress = 10;
     let stems = demucs
-        .separate(&audio_tensor)
-        .map_err(|e| format!("Failed to separate: {:?}", e))?;
+        .separate(&audio_tensor, |current_chunk, total_chunks| {
+            let _ = app.emit(
+                "separation_progress",
+                &LoadingState {
+                    title: "running Demucs model...".to_string(),
+                    description: format!("processing chunk {}/{}", current_chunk, total_chunks),
+                    progress: Some(10 + 80 * current_chunk / total_chunks),
+                },
+            );
+        })
+        .map_err(|e| e.to_string())?;
 
     app.emit(
         "separation_progress",
@@ -79,7 +88,7 @@ pub async fn start_separation(app: AppHandle, file_path: String) -> Result<Vec<S
 
     let available_stems: Vec<String> = stems.keys().cloned().collect();
 
-    // Store stems and sample rate for download
+    // store stems and sample rate for download
     *SEPARATED_STEMS.lock().unwrap() = Some(stems);
     *SAMPLE_RATE.lock().unwrap() = Some(sample_rate);
 
@@ -93,7 +102,6 @@ pub async fn start_separation(app: AppHandle, file_path: String) -> Result<Vec<S
     )
     .map_err(|e| format!("{:?}", e))?;
 
-    // **Return the keys**
     Ok(available_stems)
 }
 
@@ -115,7 +123,6 @@ pub async fn download_stem(stem_name: String, output_path: String) -> Result<(),
 
 #[command]
 pub async fn abort_separation() -> Result<(), String> {
-    // For now, just emit a cancelled progress event
-    // (Implement actual abort logic if you want)
+    // todo: implement
     Ok(())
 }

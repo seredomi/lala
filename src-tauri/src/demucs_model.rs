@@ -4,7 +4,7 @@ use std::path::Path;
 use tch::{CModule, Device, Kind, Tensor};
 
 const SAMPLE_RATE: i64 = 44100;
-const SEGMENT_LENGTH: i64 = 343980; // ~7.8 seconds at 44.1khz
+const SEGMENT_LENGTH: i64 = 441000; // 10 seconds at 44.1khz
 const OVERLAP_RATIO: f64 = 0.25;
 
 pub struct DemucsModel {
@@ -51,7 +51,10 @@ impl DemucsModel {
     /// separates audio into stems using demucs model
     /// input: tensor [2, samples] (stereo audio)
     /// output: hashmap of stem tensors [2, samples]
-    pub fn separate(&self, audio: &Tensor) -> Result<HashMap<String, Tensor>> {
+    pub fn separate<F>(&self, audio: &Tensor, mut progress_cb: F) -> Result<HashMap<String, Tensor>>
+    where
+        F: FnMut(u32, u32),
+    {
         let audio_shape = audio.size();
         let n_channels = audio_shape[0];
         let n_samples = audio_shape[1];
@@ -65,11 +68,13 @@ impl DemucsModel {
 
         if n_samples <= SEGMENT_LENGTH {
             // process short audio in one go
-            return self.separate_segment(audio);
+            let res = self.separate_segment(audio)?;
+            progress_cb(90, 1);
+            Ok(res)
+        } else {
+            // process long audio with overlap-add
+            self.separate_with_overlap(audio, progress_cb)
         }
-
-        // process long audio with overlap-add
-        self.separate_with_overlap(audio)
     }
 
     fn separate_segment(&self, audio: &Tensor) -> Result<HashMap<String, Tensor>> {
@@ -127,7 +132,14 @@ impl DemucsModel {
         Ok(result)
     }
 
-    fn separate_with_overlap(&self, audio: &Tensor) -> Result<HashMap<String, Tensor>> {
+    fn separate_with_overlap<F>(
+        &self,
+        audio: &Tensor,
+        mut progress_cb: F,
+    ) -> Result<HashMap<String, Tensor>>
+    where
+        F: FnMut(u32, u32),
+    {
         let n_samples = audio.size()[1];
         let hop_size = (SEGMENT_LENGTH as f64 * (1.0 - OVERLAP_RATIO)) as i64;
         let n_chunks = ((n_samples - SEGMENT_LENGTH) as f64 / hop_size as f64).ceil() as usize + 1;
@@ -155,10 +167,16 @@ impl DemucsModel {
 
         // process each chunk
         for chunk_idx in 0..n_chunks {
+            let progress = 10 + ((chunk_idx as f32 / n_chunks as f32) * 80.0).round() as u32;
+            progress_cb(progress, n_chunks as u32);
             let start = chunk_idx as i64 * hop_size;
             let end = (start + SEGMENT_LENGTH).min(n_samples);
             let actual_size = end - start;
 
+            progress_cb(
+                (chunk_idx + 1).try_into().unwrap(),
+                n_chunks.try_into().unwrap(),
+            );
             println!(
                 "chunk {}/{}: samples {} to {} (size: {})",
                 chunk_idx + 1,
