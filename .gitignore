@@ -25,3 +25,4 @@ dist-ssr
 
 # python venv from converting demucs onnx
 demucs-to-onnx/.venv
+models
