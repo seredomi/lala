@@ -59,7 +59,7 @@ pub async fn start_separation(app: AppHandle, file_path: String) -> Result<Vec<S
     // Load model and run separation
     // let path = env::current_dir();
     println!("The current directory is {:?}", env::current_dir());
-    let model_path = Path::new("../models/hdemucs.pt");
+    let model_path = Path::new("models/hdemucs.pt");
     let demucs =
         DemucsModel::new(model_path).map_err(|e| format!("failed to load model: {:?}", e))?;
     let mut last_progress = 10;
