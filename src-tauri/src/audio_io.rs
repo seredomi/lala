@@ -1,15 +1,15 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
-use ndarray::{Array, Array2, Axis};
 use std::path::Path;
+use tch::{Device, Tensor};
 
-/// loads a WAV file into a normalized f32 ndarray.
-/// the output shape is [channels, samples].
-pub fn load_wav_to_ndarray(path: &Path) -> Result<(Array2<f32>, u32)> {
+/// loads a wav file into a pytorch tensor with shape [channels, samples]
+/// normalizes to f32 and ensures stereo output
+pub fn load_wav_to_tensor(path: &Path, device: Device) -> Result<(Tensor, u32)> {
     let mut reader = WavReader::open(path)?;
     let spec = reader.spec();
 
-    // collect all samples into a single Vec<f32>
+    // collect samples as f32
     let samples: Vec<f32> = match spec.sample_format {
         SampleFormat::Float => reader.samples::<f32>().collect::<Result<_, _>>()?,
         SampleFormat::Int => {
@@ -22,42 +22,45 @@ pub fn load_wav_to_ndarray(path: &Path) -> Result<(Array2<f32>, u32)> {
     };
 
     let n_channels = spec.channels as usize;
-    let n_samples = samples.len() / n_channels;
+    let _n_samples = samples.len() / n_channels;
 
-    // convert the flat Vec into an ndarray and reshape it
-    let mut array = Array::from(samples)
-        .into_shape((n_samples, n_channels))
-        .map_err(|e| anyhow!("failed to reshape audio array: {}", e))?
-        .t() // transpose to [channels, samples]
-        .into_owned();
+    // create tensor [channels, samples]
+    let mut tensor = Tensor::from_slice(&samples)
+        .to_device(device)
+        .reshape(&[_n_samples as i64, n_channels as i64])
+        .transpose(0, 1);
 
-    // if mono, duplicate the channel to make it stereo as expected by the model
+    // ensure stereo - duplicate mono channel if needed
     if n_channels == 1 {
-        let mono_channel = array.index_axis(Axis(0), 0).to_owned();
-        array.push(Axis(0), mono_channel.view())?;
+        tensor = tensor.repeat(&[2, 1]);
     }
 
-    Ok((array, spec.sample_rate))
+    Ok((tensor, spec.sample_rate))
 }
 
-/// saves an ndarray [channels, samples] into a WAV file.
-pub fn save_ndarray_to_wav(path: &str, array: &Array2<f32>, sample_rate: u32) -> Result<()> {
+/// saves a pytorch tensor [channels, samples] to wav file
+pub fn save_tensor_to_wav(path: &str, tensor: &Tensor, sample_rate: u32) -> Result<()> {
+    let tensor_cpu = tensor.to_device(Device::Cpu);
+    let shape = tensor_cpu.size();
+    let n_channels = shape[0] as u16;
+
     let spec = WavSpec {
-        channels: array.shape()[0] as u16,
+        channels: n_channels,
         sample_rate,
         bits_per_sample: 32,
         sample_format: SampleFormat::Float,
     };
 
     let mut writer = WavWriter::create(path, spec)?;
-    let interleaved_samples = array.t(); // transpose to [samples, channels]
 
-    // write samples frame by frame
-    for frame in interleaved_samples.axis_iter(Axis(0)) {
-        for sample in frame {
-            writer.write_sample(*sample)?;
-        }
+    // convert to interleaved format
+    let interleaved = tensor_cpu.transpose(0, 1).contiguous();
+    let data: Vec<f32> = interleaved.view(-1).try_into()?;
+
+    for sample in data {
+        writer.write_sample(sample)?;
     }
+
     writer.finalize()?;
     Ok(())
 }

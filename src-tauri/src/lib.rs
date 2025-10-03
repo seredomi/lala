@@ -1,8 +1,7 @@
 mod audio_io;
 mod config;
-mod dsp;
+mod demucs_model;
 mod separation;
-mod separator;
 
 use config::get_app_config;
 use separation::{abort_separation, download_stem, start_separation};

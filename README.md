@@ -17,5 +17,5 @@ create a tool to remove vocals from audio tracks. specifically some [moondog](ht
 
 ## progress
 - [x] upload song
-- [ ] separate tracks
+- [x] separate tracks
 - [ ] transcribe instrumental
