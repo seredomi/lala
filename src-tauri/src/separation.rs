@@ -62,7 +62,6 @@ pub async fn start_separation(app: AppHandle, file_path: String) -> Result<Vec<S
     let model_path = Path::new("models/hdemucs.pt");
     let demucs =
         DemucsModel::new(model_path).map_err(|e| format!("failed to load model: {:?}", e))?;
-    let mut last_progress = 10;
     let stems = demucs
         .separate(&audio_tensor, |current_chunk, total_chunks| {
             let _ = app.emit(
