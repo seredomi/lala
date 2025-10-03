@@ -55,7 +55,7 @@ pub fn save_tensor_to_wav(path: &str, tensor: &Tensor, sample_rate: u32) -> Resu
 
     // convert to interleaved format
     let interleaved = tensor_cpu.transpose(0, 1).contiguous();
-    let data: Vec<f32> = interleaved.try_into()?;
+    let data: Vec<f32> = interleaved.view(-1).try_into()?;
 
     for sample in data {
         writer.write_sample(sample)?;

@@ -74,13 +74,16 @@ impl DemucsModel {
 
     fn separate_segment(&self, audio: &Tensor) -> Result<HashMap<String, Tensor>> {
         let audio_shape = audio.size();
+        let n_channels = audio_shape[0];
         let n_samples = audio_shape[1];
 
         // pad audio to model's expected length
         let mut padded = audio.shallow_clone();
         if n_samples < SEGMENT_LENGTH {
-            let padding =
-                Tensor::zeros(&[2, SEGMENT_LENGTH - n_samples], (Kind::Float, self.device));
+            let padding = Tensor::zeros(
+                &[n_channels, SEGMENT_LENGTH - n_samples],
+                (Kind::Float, self.device),
+            );
             padded = Tensor::cat(&[padded, padding], 1);
         } else if n_samples > SEGMENT_LENGTH {
             padded = padded.narrow(1, 0, SEGMENT_LENGTH);
@@ -90,14 +93,20 @@ impl DemucsModel {
         let audio_std = padded.std(false);
         let normalized = &padded / (&audio_std + 1e-8);
 
-        // add batch dimension: [1, 2, samples]
+        // add batch dimension: [1, 2, SEGMENT_LENGTH]
         let input = normalized.unsqueeze(0);
+
+        // Debug print
+        println!("Model input shape: {:?}", input.size());
 
         // run model inference
         let output = tch::no_grad(|| self.model.forward_ts(&[input]))?;
 
-        // output shape: [1, 4, 2, samples] (batch, stems, channels, time)
-        let separated = output.squeeze_dim(0); // [4, 2, samples]
+        // Debug print
+        println!("Model output shape: {:?}", output.size());
+
+        // output shape: [1, 4, 2, SEGMENT_LENGTH] (batch, stems, channels, time)
+        let separated = output.squeeze_dim(0); // [4, 2, SEGMENT_LENGTH]
 
         // denormalize and trim to original length
         let denormalized = &separated * &audio_std;
@@ -171,6 +180,9 @@ impl DemucsModel {
                 );
                 Tensor::cat(&[partial, padding], 1)
             };
+
+            // Debug print
+            println!("Chunk shape before segment separation: {:?}", chunk.size());
 
             // separate this chunk
             let chunk_results = self.separate_segment(&chunk)?;
