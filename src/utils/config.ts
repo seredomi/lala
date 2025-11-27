@@ -3,7 +3,7 @@ import { AppConfig } from "./schema";
 export const defaultAppConfig: AppConfig = {
   file_upload: {
     max_file_size_mb: 500,
-    permitted_file_extensions: ["wav"],
+    permitted_file_extensions: [".wav", ".mp3", ".flac"],
     max_upload_time_sec: 300,
   },
 };
