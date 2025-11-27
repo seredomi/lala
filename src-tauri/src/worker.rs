@@ -1,4 +1,4 @@
-use crate::db::{get_next_queued_asset, update_asset_status, DbPool};
+use crate::db::{get_assets_by_file, get_next_queued_asset, update_asset_status, DbPool};
 use crate::models::{AssetType, ProcessingStatus};
 use crate::processing::{midi_to_pdf, separate_audio, transcribe_to_midi};
 use anyhow::Result;
@@ -117,7 +117,7 @@ fn process_separation(_app: &AppHandle, pool: &DbPool, asset: &crate::models::As
 
     let stem_paths = separate_audio(input_path, output_dir, model_path)?;
 
-    // create asset records for each stem
+    // create asset records for each stem (all marked as completed, no auto-chaining)
     for (stem_name, stem_path) in stem_paths {
         let asset_type = match stem_name.as_str() {
             "piano" => AssetType::StemPiano,
@@ -134,26 +134,10 @@ fn process_separation(_app: &AppHandle, pool: &DbPool, asset: &crate::models::As
             &stem_id,
             &asset.file_id,
             Some(&asset.id),
-            asset_type.clone(),
+            asset_type,
             &stem_path,
             ProcessingStatus::Completed,
         )?;
-
-        // if it's piano, queue transcription
-        if matches!(asset_type, AssetType::StemPiano) {
-            let midi_id = Uuid::new_v4().to_string();
-            let midi_path = output_dir.join("stem_piano.midi");
-
-            create_asset(
-                pool,
-                &midi_id,
-                &asset.file_id,
-                Some(&stem_id),
-                AssetType::Midi,
-                midi_path.to_str().unwrap(),
-                ProcessingStatus::Queued,
-            )?;
-        }
     }
 
     Ok(())
@@ -164,14 +148,10 @@ fn process_transcription(
     pool: &DbPool,
     asset: &crate::models::Asset,
 ) -> Result<()> {
-    use crate::db::create_asset;
-    use uuid::Uuid;
-
     let input_wav = Path::new(&asset.file_path);
-    let output_dir = input_wav.parent().unwrap();
 
     // find the midi asset that's queued
-    let assets = crate::db::get_assets_by_file(pool, &asset.file_id)?;
+    let assets = get_assets_by_file(pool, &asset.file_id)?;
     let midi_asset = assets
         .iter()
         .find(|a| {
@@ -182,22 +162,8 @@ fn process_transcription(
     let midi_path = Path::new(&midi_asset.file_path);
     transcribe_to_midi(input_wav, midi_path)?;
 
-    // update midi asset to completed
+    // update midi asset to completed (no auto-chaining to PDF)
     update_asset_status(pool, &midi_asset.id, ProcessingStatus::Completed, None)?;
-
-    // queue pdf conversion
-    let pdf_id = Uuid::new_v4().to_string();
-    let pdf_path = output_dir.join("stem_piano.pdf");
-
-    create_asset(
-        pool,
-        &pdf_id,
-        &asset.file_id,
-        Some(&midi_asset.id),
-        AssetType::Pdf,
-        pdf_path.to_str().unwrap(),
-        ProcessingStatus::Queued,
-    )?;
 
     Ok(())
 }
@@ -213,7 +179,7 @@ fn process_pdf_conversion(
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("pdf asset has no parent"))?;
 
-    let assets = crate::db::get_assets_by_file(pool, &asset.file_id)?;
+    let assets = get_assets_by_file(pool, &asset.file_id)?;
     let midi_asset = assets
         .iter()
         .find(|a| &a.id == parent_id)

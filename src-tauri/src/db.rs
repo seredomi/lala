@@ -152,6 +152,32 @@ pub fn get_assets_by_file(pool: &DbPool, file_id: &str) -> Result<Vec<Asset>> {
     Ok(assets)
 }
 
+// pub fn get_asset_by_id(pool: &DbPool, asset_id: &str) -> Result<Option<Asset>> {
+//     let conn = pool.lock().unwrap();
+//
+//     let mut stmt = conn.prepare(
+//         "SELECT id, file_id, parent_asset_id, asset_type, file_path, status, error_message, created_at
+//          FROM assets WHERE id = ?1",
+//     )?;
+//
+//     let mut rows = stmt.query([asset_id])?;
+//
+//     if let Some(row) = rows.next()? {
+//         Ok(Some(Asset {
+//             id: row.get(0)?,
+//             file_id: row.get(1)?,
+//             parent_asset_id: row.get(2)?,
+//             asset_type: AssetType::from_string(&row.get::<_, String>(3)?),
+//             file_path: row.get(4)?,
+//             status: ProcessingStatus::from_string(&row.get::<_, String>(5)?),
+//             error_message: row.get(6)?,
+//             created_at: row.get(7)?,
+//         }))
+//     } else {
+//         Ok(None)
+//     }
+// }
+
 pub fn get_all_files(pool: &DbPool) -> Result<Vec<FileRecord>> {
     let conn = pool.lock().unwrap();
 
@@ -188,6 +214,24 @@ pub fn delete_file_and_assets(pool: &DbPool, file_id: &str) -> Result<()> {
 
     conn.execute("DELETE FROM assets WHERE file_id = ?1", [file_id])?;
     conn.execute("DELETE FROM files WHERE id = ?1", [file_id])?;
+
+    Ok(())
+}
+
+pub fn cancel_file_processing(pool: &DbPool, file_id: &str) -> Result<()> {
+    let conn = pool.lock().unwrap();
+
+    // delete queued assets
+    conn.execute(
+        "DELETE FROM assets WHERE file_id = ?1 AND status = 'queued'",
+        [file_id],
+    )?;
+
+    // mark processing assets as cancelled
+    conn.execute(
+        "UPDATE assets SET status = 'cancelled' WHERE file_id = ?1 AND status = 'processing'",
+        [file_id],
+    )?;
 
     Ok(())
 }

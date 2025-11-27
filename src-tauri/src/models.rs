@@ -7,6 +7,7 @@ pub enum ProcessingStatus {
     Processing,
     Completed,
     Failed,
+    Cancelled,
 }
 
 impl ProcessingStatus {
@@ -16,6 +17,7 @@ impl ProcessingStatus {
             ProcessingStatus::Processing => "processing".to_string(),
             ProcessingStatus::Completed => "completed".to_string(),
             ProcessingStatus::Failed => "failed".to_string(),
+            ProcessingStatus::Cancelled => "cancelled".to_string(),
         }
     }
 
@@ -25,6 +27,7 @@ impl ProcessingStatus {
             "processing" => ProcessingStatus::Processing,
             "completed" => ProcessingStatus::Completed,
             "failed" => ProcessingStatus::Failed,
+            "cancelled" => ProcessingStatus::Cancelled,
             _ => ProcessingStatus::Failed,
         }
     }
