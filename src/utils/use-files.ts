@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
-import { FileWithStatus, ProcessingProgress, TargetStage } from "./schema";
+import {
+  FileWithStatus,
+  ProcessingProgress,
+  TargetStage,
+  AssetType,
+} from "./schema";
 import {
   getFilesWithStatus,
   uploadFile as uploadFileApi,
@@ -9,6 +14,23 @@ import {
   deleteFile as deleteFileApi,
   downloadAsset as downloadAssetApi,
 } from "./files";
+
+// helper types for stage status
+export type StageStatus =
+  | "completed"
+  | "processing"
+  | "queued"
+  | "failed"
+  | "cancelled"
+  | "empty";
+
+export interface StageInfo {
+  status: StageStatus;
+  assets: Array<{ id: string; asset_type: string; file_path: string }>;
+  canProcess: boolean;
+  canCancel: boolean;
+  canDownload: boolean;
+}
 
 export const useFiles = () => {
   const [files, setFiles] = useState<FileWithStatus[]>([]);
@@ -70,6 +92,53 @@ export const useFiles = () => {
     };
   }, []);
 
+  // helper to get stage info for a file
+  const getStageInfo = (
+    file: FileWithStatus,
+    stage: "stems" | "midi" | "pdf",
+  ): StageInfo => {
+    const stageAssetTypes: Record<string, AssetType[]> = {
+      stems: ["stem_piano", "stem_vocals", "stem_drums", "stem_bass"],
+      midi: ["midi"],
+      pdf: ["pdf"],
+    };
+
+    const relevantAssets = file.assets.filter((a) =>
+      stageAssetTypes[stage].includes(a.asset_type as AssetType),
+    );
+
+    const hasCompleted = relevantAssets.some((a) => a.status === "completed");
+    const hasQueued = relevantAssets.some((a) => a.status === "queued");
+    const hasProcessing = relevantAssets.some((a) => a.status === "processing");
+    const hasFailed = relevantAssets.some((a) => a.status === "failed");
+    const hasCancelled = relevantAssets.some((a) => a.status === "cancelled");
+
+    let status: StageStatus = "empty";
+    if (hasCompleted) status = "completed";
+    else if (hasProcessing) status = "processing";
+    else if (hasQueued) status = "queued";
+    else if (hasFailed) status = "failed";
+    else if (hasCancelled) status = "cancelled";
+
+    const isProcessingAnything = file.current_status === "processing";
+
+    return {
+      status,
+      assets: relevantAssets
+        .filter((a) => a.status === "completed")
+        .map((a) => ({
+          id: a.id,
+          asset_type: a.asset_type,
+          file_path: a.file_path,
+        })),
+      canProcess:
+        !isProcessingAnything &&
+        (status === "empty" || status === "failed" || status === "cancelled"),
+      canCancel: status === "processing" || status === "queued",
+      canDownload: status === "completed",
+    };
+  };
+
   // wrapper functions that auto-refresh
   const uploadFile = async () => {
     const fileId = await uploadFileApi();
@@ -127,5 +196,6 @@ export const useFiles = () => {
     deleteFile,
     downloadAsset,
     refresh: loadFiles,
+    getStageInfo, // expose helper
   };
 };
