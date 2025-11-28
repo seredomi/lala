@@ -37,14 +37,6 @@ export const uploadFile = async (): Promise<string | null> => {
       originalFilename: fileName,
     });
 
-    toast({
-      kind: "success",
-      title: "file uploaded",
-      subtitle: fileName,
-      actionButtonLabel: "ok",
-      actionCloses: true,
-    });
-
     return fileId;
   } catch (error) {
     console.error("failed to upload file:", error);
