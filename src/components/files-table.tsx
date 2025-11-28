@@ -50,13 +50,6 @@ const ACTION_BUTTON_TEXT: Record<TargetStage, string> = {
   pdf: "convert",
 };
 
-const STEM_NAMES: Record<string, string> = {
-  stem_piano: "piano",
-  stem_vocals: "vocals",
-  stem_drums: "drums",
-  stem_bass: "bass",
-};
-
 interface StageCellProps {
   file: FileWithStatus;
   stage: TargetStage;
@@ -123,32 +116,17 @@ const StageCell = ({
     return (
       <div style={cellStyle}>
         <span style={statusTextStyle}>{STATUS_TEXT[stageInfo.status]}</span>
-        <div style={{ display: "flex", gap: "0.25rem" }}>
-          {stage === "stems" ? (
-            stageInfo.assets.map((asset) => (
-              <Button
-                key={asset.id}
-                kind="ghost"
-                size="sm"
-                hasIconOnly
-                iconDescription={`download ${STEM_NAMES[asset.asset_type] || asset.asset_type}`}
-                renderIcon={Download}
-                onClick={() => onDownload(file.id, asset.asset_type)}
-                style={{ visibility: isRowHovered ? "visible" : "hidden" }}
-              />
-            ))
-          ) : (
-            <Button
-              kind="ghost"
-              size="sm"
-              hasIconOnly
-              iconDescription={`download ${stage}`}
-              renderIcon={Download}
-              onClick={() => onDownload(file.id, stage)}
-              style={{ visibility: isRowHovered ? "visible" : "hidden" }}
-            />
-          )}
-        </div>
+        <Button
+          kind="ghost"
+          size="sm"
+          hasIconOnly
+          iconDescription={`download ${stage === "stems" ? "piano" : stage}`}
+          renderIcon={Download}
+          onClick={() =>
+            onDownload(file.id, stage === "stems" ? "stem_piano" : stage)
+          }
+          style={{ visibility: isRowHovered ? "visible" : "hidden" }}
+        />
       </div>
     );
   }
@@ -254,7 +232,7 @@ export const FileTable = () => {
 
   const headers = [
     { header: "initial audio", key: "original_filename" },
-    { header: "instruments", key: "has_stems" },
+    { header: "piano audio", key: "has_stems" },
     { header: "midi", key: "has_midi" },
     { header: "sheet music", key: "has_pdf" },
   ];

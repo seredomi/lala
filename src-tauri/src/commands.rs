@@ -88,17 +88,32 @@ pub async fn process_to_stage(
     let assets = get_assets_by_file(&pool, &file_id).map_err(|e| e.to_string())?;
     let file_dir = app_data_dir.join("processing-files").join(&file_id);
 
-    // determine what stages exist
-    let has_original = assets
-        .iter()
-        .any(|a| matches!(a.asset_type, AssetType::Original));
+    // determine what stages exist and are completed
+    let has_original = assets.iter().any(|a| {
+        matches!(a.asset_type, AssetType::Original)
+            && matches!(a.status, ProcessingStatus::Completed)
+    });
+
     let has_stems = assets.iter().any(|a| {
         matches!(a.asset_type, AssetType::StemPiano)
             && matches!(a.status, ProcessingStatus::Completed)
     });
+
     let has_midi = assets.iter().any(|a| {
         matches!(a.asset_type, AssetType::Midi) && matches!(a.status, ProcessingStatus::Completed)
     });
+
+    // check if anything is already queued or processing
+    let has_queued_or_processing = assets.iter().any(|a| {
+        matches!(
+            a.status,
+            ProcessingStatus::Queued | ProcessingStatus::Processing
+        )
+    });
+
+    if has_queued_or_processing {
+        return Err("file already has processing in progress".to_string());
+    }
 
     if !has_original {
         return Err("no original file found".to_string());
@@ -118,7 +133,7 @@ pub async fn process_to_stage(
             }
         }
         "midi" => {
-            // need stems first
+            // need stems first - only queue original, don't create midi yet
             if !has_stems {
                 let original = assets
                     .iter()
@@ -127,28 +142,43 @@ pub async fn process_to_stage(
 
                 crate::db::update_asset_status(&pool, &original.id, ProcessingStatus::Queued, None)
                     .map_err(|e| e.to_string())?;
+
+                // don't create midi asset yet - it will be created after stems complete
+                return Ok(());
             }
 
-            // queue midi creation
-            if !has_midi {
+            // stems are ready, now queue midi if it doesn't exist
+            let existing_midi = assets
+                .iter()
+                .find(|a| matches!(a.asset_type, AssetType::Midi));
+
+            if existing_midi.is_none() {
                 let midi_id = Uuid::new_v4().to_string();
                 let midi_path = file_dir.join("stem_piano.midi");
 
-                // find piano stem to use as parent
                 let piano_stem = assets
                     .iter()
-                    .find(|a| matches!(a.asset_type, AssetType::StemPiano));
+                    .find(|a| matches!(a.asset_type, AssetType::StemPiano))
+                    .ok_or("piano stem not found")?;
 
                 create_asset(
                     &pool,
                     &midi_id,
                     &file_id,
-                    piano_stem.map(|s| s.id.as_str()),
+                    Some(&piano_stem.id),
                     AssetType::Midi,
                     midi_path.to_str().unwrap(),
                     ProcessingStatus::Queued,
                 )
                 .map_err(|e| e.to_string())?;
+            } else if let Some(midi) = existing_midi {
+                if matches!(
+                    midi.status,
+                    ProcessingStatus::Failed | ProcessingStatus::Cancelled
+                ) {
+                    crate::db::update_asset_status(&pool, &midi.id, ProcessingStatus::Queued, None)
+                        .map_err(|e| e.to_string())?;
+                }
             }
         }
         "pdf" => {
@@ -161,53 +191,93 @@ pub async fn process_to_stage(
 
                 crate::db::update_asset_status(&pool, &original.id, ProcessingStatus::Queued, None)
                     .map_err(|e| e.to_string())?;
+
+                return Ok(());
             }
 
-            // queue midi creation
-            if !has_midi {
-                let midi_id = Uuid::new_v4().to_string();
-                let midi_path = file_dir.join("stem_piano.midi");
+            // stems ready, need midi
+            let existing_midi = assets
+                .iter()
+                .find(|a| matches!(a.asset_type, AssetType::Midi));
 
-                let piano_stem = assets
-                    .iter()
-                    .find(|a| matches!(a.asset_type, AssetType::StemPiano));
-
-                create_asset(
-                    &pool,
-                    &midi_id,
-                    &file_id,
-                    piano_stem.map(|s| s.id.as_str()),
-                    AssetType::Midi,
-                    midi_path.to_str().unwrap(),
-                    ProcessingStatus::Queued,
+            if existing_midi.is_none()
+                || matches!(
+                    existing_midi.unwrap().status,
+                    ProcessingStatus::Failed | ProcessingStatus::Cancelled
                 )
-                .map_err(|e| e.to_string())?;
+            {
+                let midi_id = if let Some(midi) = existing_midi {
+                    // requeue existing
+                    crate::db::update_asset_status(&pool, &midi.id, ProcessingStatus::Queued, None)
+                        .map_err(|e| e.to_string())?;
+                    midi.id.clone()
+                } else {
+                    // create new
+                    let midi_id = Uuid::new_v4().to_string();
+                    let midi_path = file_dir.join("stem_piano.midi");
+
+                    let piano_stem = assets
+                        .iter()
+                        .find(|a| matches!(a.asset_type, AssetType::StemPiano))
+                        .ok_or("piano stem not found")?;
+
+                    create_asset(
+                        &pool,
+                        &midi_id,
+                        &file_id,
+                        Some(&piano_stem.id),
+                        AssetType::Midi,
+                        midi_path.to_str().unwrap(),
+                        ProcessingStatus::Queued,
+                    )
+                    .map_err(|e| e.to_string())?;
+
+                    midi_id
+                };
+
+                // don't create pdf yet - wait for midi to complete
+                return Ok(());
             }
 
-            // queue pdf creation
-            let has_pdf = assets.iter().any(|a| {
-                matches!(a.asset_type, AssetType::Pdf)
-                    && matches!(a.status, ProcessingStatus::Completed)
-            });
+            // midi is completed, now queue pdf
+            if !has_midi {
+                return Ok(()); // midi is processing, wait
+            }
 
-            if !has_pdf {
+            let existing_pdf = assets
+                .iter()
+                .find(|a| matches!(a.asset_type, AssetType::Pdf));
+
+            if existing_pdf.is_none() {
                 let pdf_id = Uuid::new_v4().to_string();
                 let pdf_path = file_dir.join("stem_piano.pdf");
 
                 let midi_asset = assets
                     .iter()
-                    .find(|a| matches!(a.asset_type, AssetType::Midi));
+                    .find(|a| {
+                        matches!(a.asset_type, AssetType::Midi)
+                            && matches!(a.status, ProcessingStatus::Completed)
+                    })
+                    .ok_or("midi asset not found")?;
 
                 create_asset(
                     &pool,
                     &pdf_id,
                     &file_id,
-                    midi_asset.map(|m| m.id.as_str()),
+                    Some(&midi_asset.id),
                     AssetType::Pdf,
                     pdf_path.to_str().unwrap(),
                     ProcessingStatus::Queued,
                 )
                 .map_err(|e| e.to_string())?;
+            } else if let Some(pdf) = existing_pdf {
+                if matches!(
+                    pdf.status,
+                    ProcessingStatus::Failed | ProcessingStatus::Cancelled
+                ) {
+                    crate::db::update_asset_status(&pool, &pdf.id, ProcessingStatus::Queued, None)
+                        .map_err(|e| e.to_string())?;
+                }
             }
         }
         _ => return Err("invalid target stage".to_string()),

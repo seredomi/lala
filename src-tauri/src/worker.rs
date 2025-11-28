@@ -120,7 +120,7 @@ fn process_separation(_app: &AppHandle, pool: &DbPool, asset: &crate::models::As
     // create asset records for each stem (all marked as completed, no auto-chaining)
     for (stem_name, stem_path) in stem_paths {
         let asset_type = match stem_name.as_str() {
-            "piano" => AssetType::StemPiano,
+            "other" => AssetType::StemPiano, // "other" contains piano/melodic instruments
             "vocals" => AssetType::StemVocals,
             "drums" => AssetType::StemDrums,
             "bass" => AssetType::StemBass,
@@ -148,22 +148,35 @@ fn process_transcription(
     pool: &DbPool,
     asset: &crate::models::Asset,
 ) -> Result<()> {
-    let input_wav = Path::new(&asset.file_path);
+    // find the piano stem (parent)
+    let piano_stem = if let Some(parent_id) = &asset.parent_asset_id {
+        let assets = get_assets_by_file(pool, &asset.file_id)?;
+        assets
+            .iter()
+            .find(|a| &a.id == parent_id)
+            .ok_or_else(|| anyhow::anyhow!("parent piano stem not found"))?
+            .clone()
+    } else {
+        // if no parent set, try to find and update
+        let assets = get_assets_by_file(pool, &asset.file_id)?;
+        let piano_stem = assets
+            .iter()
+            .find(|a| {
+                matches!(a.asset_type, AssetType::StemPiano)
+                    && matches!(a.status, ProcessingStatus::Completed)
+            })
+            .ok_or_else(|| anyhow::anyhow!("piano stem not ready yet"))?;
 
-    // find the midi asset that's queued
-    let assets = get_assets_by_file(pool, &asset.file_id)?;
-    let midi_asset = assets
-        .iter()
-        .find(|a| {
-            matches!(a.asset_type, AssetType::Midi) && matches!(a.status, ProcessingStatus::Queued)
-        })
-        .ok_or_else(|| anyhow::anyhow!("no queued midi asset found"))?;
+        // update midi asset's parent
+        use crate::db::update_asset_parent;
+        update_asset_parent(pool, &asset.id, Some(&piano_stem.id))?;
 
-    let midi_path = Path::new(&midi_asset.file_path);
+        piano_stem.clone()
+    };
+
+    let input_wav = Path::new(&piano_stem.file_path);
+    let midi_path = Path::new(&asset.file_path);
     transcribe_to_midi(input_wav, midi_path)?;
-
-    // update midi asset to completed (no auto-chaining to PDF)
-    update_asset_status(pool, &midi_asset.id, ProcessingStatus::Completed, None)?;
 
     Ok(())
 }

@@ -34,14 +34,20 @@ impl ProcessingStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
 pub enum AssetType {
+    #[serde(rename = "original")]
     Original,
+    #[serde(rename = "stem_piano")]
     StemPiano,
+    #[serde(rename = "stem_vocals")]
     StemVocals,
+    #[serde(rename = "stem_drums")]
     StemDrums,
+    #[serde(rename = "stem_bass")]
     StemBass,
+    #[serde(rename = "midi")]
     Midi,
+    #[serde(rename = "pdf")]
     Pdf,
 }
 
