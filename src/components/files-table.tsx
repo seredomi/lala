@@ -13,7 +13,6 @@ import {
   TableToolbar,
   TableToolbarContent,
   TableToolbarSearch,
-  ProgressBar,
   InlineLoading,
   IconButton,
 } from "@carbon/react";
@@ -124,11 +123,11 @@ const StageCell = ({
       file.current_progress.asset_type === stage);
 
   // check if this stage has failed
-  const thisStageError = file.assets.find(
-    (a) =>
-      (stage === "stems" && a.asset_type === "stem_piano") ||
-      a.asset_type === stage,
-  )?.error_message;
+  // const thisStageError = file.assets.find(
+  //   (a) =>
+  //     (stage === "stems" && a.asset_type === "stem_piano") ||
+  //     a.asset_type === stage,
+  // )?.error_message;
 
   return (
     <div style={cellStyle}>
@@ -193,6 +192,7 @@ const StageCell = ({
         {/* cancel button - only for the actively processing stage */}
         {isThisStageProcessing && (
           <IconButton
+            // @ts-expect-error 'danger' works as a kind. unsure why cds doesnt enumerate it as an option
             kind="danger"
             size="sm"
             label="cancel"

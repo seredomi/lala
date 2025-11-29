@@ -271,60 +271,6 @@ fn queue_next_stage_for_target(
     Ok(())
 }
 
-fn auto_queue_next_stage(pool: &DbPool, completed_asset: &crate::models::Asset) -> Result<()> {
-    println!(
-        "auto_queue_next_stage called for asset: {:?}",
-        completed_asset.asset_type
-    );
-
-    // only auto-queue if this was an Original asset (stems just completed)
-    if !matches!(completed_asset.asset_type, AssetType::Original) {
-        println!("not an Original asset, skipping auto-queue");
-        return Ok(());
-    }
-
-    // check if there are any queued MIDI or PDF assets waiting for stems
-    let assets = get_assets_by_file(pool, &completed_asset.file_id)?;
-
-    println!("checking {} assets for orphaned MIDI", assets.len());
-
-    // look for queued MIDI that has no parent (was waiting for stems)
-    let orphaned_midi = assets.iter().find(|a| {
-        let matches_type = matches!(a.asset_type, AssetType::Midi);
-        let matches_status = matches!(a.status, ProcessingStatus::Queued);
-        let no_parent = a.parent_asset_id.is_none();
-
-        println!(
-            "asset {:?}: type={}, status={}, no_parent={}",
-            a.asset_type, matches_type, matches_status, no_parent
-        );
-
-        matches_type && matches_status && no_parent
-    });
-
-    if let Some(midi) = orphaned_midi {
-        println!("found orphaned MIDI asset: {}", midi.id);
-
-        // find the piano stem
-        let piano_stem = assets
-            .iter()
-            .find(|a| matches!(a.asset_type, AssetType::StemPiano))
-            .ok_or_else(|| anyhow::anyhow!("piano stem not found after separation"))?;
-
-        println!("found piano stem: {}", piano_stem.id);
-
-        // update midi's parent
-        use crate::db::update_asset_parent;
-        update_asset_parent(pool, &midi.id, Some(&piano_stem.id))?;
-
-        println!("auto-updated MIDI parent after stem completion");
-    } else {
-        println!("no orphaned MIDI found");
-    }
-
-    Ok(())
-}
-
 fn process_separation(app: &AppHandle, pool: &DbPool, asset: &crate::models::Asset) -> Result<()> {
     let input_path = Path::new(&asset.file_path);
     let output_dir = input_path.parent().unwrap();

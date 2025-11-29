@@ -238,21 +238,6 @@ pub fn cancel_file_processing(pool: &DbPool, file_id: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn update_asset_parent(
-    pool: &DbPool,
-    asset_id: &str,
-    parent_asset_id: Option<&str>,
-) -> Result<()> {
-    let conn = pool.lock().unwrap();
-
-    conn.execute(
-        "UPDATE assets SET parent_asset_id = ?1 WHERE id = ?2",
-        params![parent_asset_id, asset_id],
-    )?;
-
-    Ok(())
-}
-
 pub fn set_target_stage(pool: &DbPool, file_id: &str, target_stage: Option<&str>) -> Result<()> {
     let conn = pool.lock().unwrap();
 

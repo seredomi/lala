@@ -149,13 +149,6 @@ export const processToStage = async (
 ): Promise<boolean> => {
   try {
     await invoke("process_to_stage", { fileId, targetStage });
-    toast({
-      kind: "success",
-      title: "processing started",
-      subtitle: `processing to ${targetStage}`,
-      actionButtonLabel: "ok",
-      actionCloses: true,
-    });
     return true;
   } catch (error) {
     console.error("failed to start processing:", error);
@@ -173,13 +166,6 @@ export const processToStage = async (
 export const cancelProcessing = async (fileId: string): Promise<boolean> => {
   try {
     await invoke("cancel_processing", { fileId });
-    toast({
-      kind: "success",
-      title: "processing cancelled",
-      subtitle: "stopped all queued jobs",
-      actionButtonLabel: "ok",
-      actionCloses: true,
-    });
     return true;
   } catch (error) {
     console.error("failed to cancel processing:", error);
@@ -219,14 +205,6 @@ export const downloadAsset = async (
     await invoke("download_asset", {
       assetPath: asset.file_path,
       destination: outputPath,
-    });
-
-    toast({
-      kind: "success",
-      title: "download complete",
-      subtitle: `saved to ${outputPath}`,
-      actionButtonLabel: "ok",
-      actionCloses: true,
     });
 
     return true;

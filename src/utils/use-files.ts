@@ -42,15 +42,6 @@ export const useFiles = () => {
     setIsLoading(true);
     const filesWithStatus = await getFilesWithStatus(progressMapRef.current);
 
-    console.log(
-      "REFETCH completed, files:",
-      filesWithStatus.map((f) => ({
-        id: f.id.slice(0, 8),
-        assets: f.assets.map((a) => ({ type: a.asset_type, status: a.status })),
-        current_progress: f.current_progress,
-      })),
-    );
-
     setFiles(filesWithStatus);
     setIsLoading(false);
   };
@@ -70,23 +61,15 @@ export const useFiles = () => {
         (event) => {
           const progress = event.payload;
 
-          console.log("PROGRESS EVENT:", {
-            asset_type: progress.asset_type,
-            title: progress.title,
-            progress: progress.progress,
-            timestamp: new Date().toISOString().slice(14, 23),
-          });
-
           // update progress map
           progressMapRef.current.set(progress.file_id, progress);
 
           // if stage completed or failed, refetch to get updated asset statuses
           if (progress.title === "completed" || progress.title === "failed") {
-            console.log("stage completed/failed, refetching files");
             // small delay to ensure backend has updated DB
             setTimeout(() => {
               loadFiles();
-            }, 100);
+            }, 500);
           } else {
             // for ALL other progress updates (including "processing"), update in-place
             setFiles((prevFiles) =>

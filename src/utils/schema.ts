@@ -28,10 +28,12 @@ export const AssetTypeSchema = z.enum([
   "pdf",
 ]);
 
+export const TargetStageSchema = z.enum(["stems", "midi", "pdf"]);
+
 export const FileRecordSchema = z.object({
   id: z.string(),
   original_filename: z.string(),
-  target_stage: z.string().nullable(),
+  target_stage: TargetStageSchema.nullable(),
   created_at: z.number(),
 });
 
@@ -55,8 +57,6 @@ export const ProcessingProgressSchema = z.object({
   progress: z.number().min(0).max(1),
 });
 
-export const TargetStageSchema = z.enum(["stems", "midi", "pdf"]);
-
 // derived type for table display
 export const FileWithStatusSchema = z.object({
   id: z.string(),
@@ -71,6 +71,7 @@ export const FileWithStatusSchema = z.object({
   current_progress: ProcessingProgressSchema.nullable(),
   error_message: z.string().nullable(),
   assets: z.array(AssetSchema),
+  target_stage: TargetStageSchema.nullable(),
 });
 
 export type CurrentView = z.infer<typeof CurrentViewSchema>;
