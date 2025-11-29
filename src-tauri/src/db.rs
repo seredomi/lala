@@ -13,6 +13,7 @@ pub fn init_db(db_path: &Path) -> Result<DbPool> {
         "CREATE TABLE IF NOT EXISTS files (
             id TEXT PRIMARY KEY,
             original_filename TEXT NOT NULL,
+            target_stage TEXT,
             created_at INTEGER NOT NULL
         )",
         [],
@@ -48,7 +49,7 @@ pub fn create_file(pool: &DbPool, id: &str, original_filename: &str) -> Result<(
     let now = chrono::Utc::now().timestamp();
 
     conn.execute(
-        "INSERT INTO files (id, original_filename, created_at) VALUES (?1, ?2, ?3)",
+        "INSERT INTO files (id, original_filename, target_stage, created_at) VALUES (?1, ?2, NULL, ?3)",
         params![id, original_filename, now],
     )?;
 
@@ -182,14 +183,15 @@ pub fn get_all_files(pool: &DbPool) -> Result<Vec<FileRecord>> {
     let conn = pool.lock().unwrap();
 
     let mut stmt = conn
-        .prepare("SELECT id, original_filename, created_at FROM files ORDER BY created_at DESC")?;
+        .prepare("SELECT id, original_filename, target_stage, created_at FROM files ORDER BY created_at DESC")?;
 
     let files = stmt
         .query_map([], |row| {
             Ok(FileRecord {
                 id: row.get(0)?,
                 original_filename: row.get(1)?,
-                created_at: row.get(2)?,
+                target_stage: row.get(2)?,
+                created_at: row.get(3)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -249,4 +251,28 @@ pub fn update_asset_parent(
     )?;
 
     Ok(())
+}
+
+pub fn set_target_stage(pool: &DbPool, file_id: &str, target_stage: Option<&str>) -> Result<()> {
+    let conn = pool.lock().unwrap();
+
+    conn.execute(
+        "UPDATE files SET target_stage = ?1 WHERE id = ?2",
+        params![target_stage, file_id],
+    )?;
+
+    Ok(())
+}
+
+pub fn get_file_target_stage(pool: &DbPool, file_id: &str) -> Result<Option<String>> {
+    let conn = pool.lock().unwrap();
+
+    let mut stmt = conn.prepare("SELECT target_stage FROM files WHERE id = ?1")?;
+    let mut rows = stmt.query([file_id])?;
+
+    if let Some(row) = rows.next()? {
+        Ok(row.get(0)?)
+    } else {
+        Ok(None)
+    }
 }

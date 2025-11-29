@@ -41,6 +41,16 @@ export const useFiles = () => {
   const loadFiles = async () => {
     setIsLoading(true);
     const filesWithStatus = await getFilesWithStatus(progressMapRef.current);
+
+    console.log(
+      "REFETCH completed, files:",
+      filesWithStatus.map((f) => ({
+        id: f.id.slice(0, 8),
+        assets: f.assets.map((a) => ({ type: a.asset_type, status: a.status })),
+        current_progress: f.current_progress,
+      })),
+    );
+
     setFiles(filesWithStatus);
     setIsLoading(false);
   };
@@ -60,21 +70,33 @@ export const useFiles = () => {
         (event) => {
           const progress = event.payload;
 
+          console.log("PROGRESS EVENT:", {
+            asset_type: progress.asset_type,
+            title: progress.title,
+            progress: progress.progress,
+            timestamp: new Date().toISOString().slice(14, 23),
+          });
+
           // update progress map
           progressMapRef.current.set(progress.file_id, progress);
 
           // if stage completed or failed, refetch to get updated asset statuses
           if (progress.title === "completed" || progress.title === "failed") {
+            console.log("stage completed/failed, refetching files");
             // small delay to ensure backend has updated DB
             setTimeout(() => {
               loadFiles();
             }, 100);
           } else {
-            // just update progress in-place without refetching
+            // for ALL other progress updates (including "processing"), update in-place
             setFiles((prevFiles) =>
               prevFiles.map((file) =>
                 file.id === progress.file_id
-                  ? { ...file, current_progress: progress }
+                  ? {
+                      ...file,
+                      current_progress: progress,
+                      current_status: "processing",
+                    }
                   : file,
               ),
             );
@@ -98,7 +120,7 @@ export const useFiles = () => {
     stage: "stems" | "midi" | "pdf",
   ): StageInfo => {
     const stageAssetTypes: Record<string, AssetType[]> = {
-      stems: ["stem_piano", "stem_vocals", "stem_drums", "stem_bass"],
+      stems: ["stem_piano"],
       midi: ["midi"],
       pdf: ["pdf"],
     };
@@ -109,14 +131,40 @@ export const useFiles = () => {
 
     const hasCompleted = relevantAssets.some((a) => a.status === "completed");
     const hasQueued = relevantAssets.some((a) => a.status === "queued");
-    const hasProcessing = relevantAssets.some((a) => a.status === "processing");
+    const hasProcessing =
+      relevantAssets.some((a) => a.status === "processing") ||
+      (relevantAssets.some((a) => a.status === "queued") &&
+        file.current_progress &&
+        file.current_progress.asset_type ===
+          (stage === "stems" ? "original" : stage));
     const hasFailed = relevantAssets.some((a) => a.status === "failed");
     const hasCancelled = relevantAssets.some((a) => a.status === "cancelled");
 
+    // special case: if original asset is processing, stems are being created
+    const originalProcessing =
+      stage === "stems" &&
+      file.assets.some(
+        (a) => a.asset_type === "original" && a.status === "processing",
+      );
+
+    // determine if this stage should show as "queued" based on target_stage
+    const shouldShowQueued =
+      file.target_stage &&
+      !hasCompleted &&
+      !hasProcessing &&
+      !hasFailed &&
+      !originalProcessing;
+    const stageOrder = { stems: 0, midi: 1, pdf: 2 };
+    const isInPath =
+      file.target_stage &&
+      stageOrder[stage] <=
+        stageOrder[file.target_stage as keyof typeof stageOrder];
+
     let status: StageStatus = "empty";
     if (hasCompleted) status = "completed";
-    else if (hasProcessing) status = "processing";
+    else if (hasProcessing || originalProcessing) status = "processing";
     else if (hasQueued) status = "queued";
+    else if (shouldShowQueued && isInPath) status = "queued";
     else if (hasFailed) status = "failed";
     else if (hasCancelled) status = "cancelled";
 
@@ -133,8 +181,10 @@ export const useFiles = () => {
         })),
       canProcess:
         !isProcessingAnything &&
+        !file.target_stage &&
         (status === "empty" || status === "failed" || status === "cancelled"),
-      canCancel: status === "processing" || status === "queued",
+      canCancel:
+        !!file.target_stage || status === "processing" || status === "queued",
       canDownload: status === "completed",
     };
   };

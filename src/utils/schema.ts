@@ -31,6 +31,7 @@ export const AssetTypeSchema = z.enum([
 export const FileRecordSchema = z.object({
   id: z.string(),
   original_filename: z.string(),
+  target_stage: z.string().nullable(),
   created_at: z.number(),
 });
 
@@ -51,6 +52,7 @@ export const ProcessingProgressSchema = z.object({
   asset_type: z.string(),
   title: z.string(),
   description: z.string(),
+  progress: z.number().min(0).max(1),
 });
 
 export const TargetStageSchema = z.enum(["stems", "midi", "pdf"]);

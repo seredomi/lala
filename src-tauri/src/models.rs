@@ -82,6 +82,7 @@ impl AssetType {
 pub struct FileRecord {
     pub id: String,
     pub original_filename: String,
+    pub target_stage: Option<String>,
     pub created_at: i64,
 }
 

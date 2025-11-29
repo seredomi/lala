@@ -13,6 +13,9 @@ import {
   TableToolbar,
   TableToolbarContent,
   TableToolbarSearch,
+  ProgressBar,
+  InlineLoading,
+  IconButton,
 } from "@carbon/react";
 import { useFiles, StageInfo } from "../utils/use-files";
 import {
@@ -21,27 +24,52 @@ import {
   Download,
   StopOutline,
   PortInput,
+  CheckmarkFilled,
+  TimeFilled,
+  ErrorFilled,
 } from "@carbon/icons-react";
 import { FileWithStatus, TargetStage } from "../utils/schema";
-import { useState } from "react";
+import { createElement, useState } from "react";
 
 // configuration records
-const STATUS_COLORS: Record<string, string> = {
-  completed: "var(--cds-support-success)",
-  processing: "var(--cds-support-info)",
-  queued: "var(--cds-text-secondary)",
-  failed: "var(--cds-support-error)",
-  cancelled: "var(--cds-support-error)",
-  empty: "var(--cds-text-secondary)",
-};
-
-const STATUS_TEXT: Record<string, string> = {
-  empty: "—",
-  completed: "completed",
-  processing: "processing",
-  queued: "queued",
-  failed: "failed",
-  cancelled: "cancelled",
+const STATUS_CONFIG: Record<
+  string,
+  {
+    text: string;
+    color: string;
+    icon: any;
+  }
+> = {
+  empty: {
+    text: "—",
+    color: "var(--cds-text-secondary)",
+    icon: null,
+  },
+  completed: {
+    text: "done",
+    color: "var(--cds-text-placeholder)",
+    icon: CheckmarkFilled,
+  },
+  processing: {
+    text: "processing",
+    color: "var(--cds-support-info)",
+    icon: InlineLoading,
+  },
+  queued: {
+    text: "queued",
+    color: "var(--cds-text-placeholder)",
+    icon: TimeFilled,
+  },
+  failed: {
+    text: "failed",
+    color: "var(--cds-support-error)",
+    icon: ErrorFilled,
+  },
+  cancelled: {
+    text: "cancelled",
+    color: "var(--cds-support-error)",
+    icon: ErrorFilled,
+  },
 };
 
 const ACTION_BUTTON_TEXT: Record<TargetStage, string> = {
@@ -71,81 +99,111 @@ const StageCell = ({
 }: StageCellProps) => {
   const cellStyle = {
     display: "flex",
-    alignItems: "center",
+    flexDirection: "column" as const,
     gap: "0.5rem",
     minHeight: "3rem",
+    justifyContent: "center",
+  };
+
+  const statusRowStyle = {
+    display: "flex",
+    alignItems: "center",
+    gap: "0.5rem",
   };
 
   const statusTextStyle = {
     fontSize: "0.875rem",
-    color: STATUS_COLORS[stageInfo.status],
+    color: STATUS_CONFIG[stageInfo.status].color,
   };
 
-  // processing state
-  if (stageInfo.status === "processing") {
-    return (
-      <div style={cellStyle}>
-        <div style={{ flex: 1 }}>
-          <div style={{ ...statusTextStyle, fontWeight: 600 }}>
-            {file.current_progress?.title || "processing"}
-          </div>
-          <div
-            style={{
-              color: "var(--cds-text-secondary)",
-              fontSize: "0.75rem",
-            }}
-          >
-            {file.current_progress?.description || ""}
-          </div>
-        </div>
-        <Button
-          kind="danger--ghost"
-          size="sm"
-          hasIconOnly
-          iconDescription="cancel"
-          renderIcon={StopOutline}
-          onClick={() => onCancel(file.id)}
-          style={{ visibility: isRowHovered ? "visible" : "hidden" }}
-        />
-      </div>
-    );
-  }
+  // determine if this stage is currently processing
+  const isThisStageProcessing =
+    stageInfo.status === "processing" &&
+    file.current_progress &&
+    ((stage === "stems" && file.current_progress.asset_type === "original") ||
+      file.current_progress.asset_type === stage);
 
-  // completed state with downloads
-  if (stageInfo.canDownload) {
-    return (
-      <div style={cellStyle}>
-        <span style={statusTextStyle}>{STATUS_TEXT[stageInfo.status]}</span>
-        <Button
-          kind="ghost"
-          size="sm"
-          hasIconOnly
-          iconDescription={`download ${stage === "stems" ? "piano" : stage}`}
-          renderIcon={Download}
-          onClick={() =>
-            onDownload(file.id, stage === "stems" ? "stem_piano" : stage)
-          }
-          style={{ visibility: isRowHovered ? "visible" : "hidden" }}
-        />
-      </div>
-    );
-  }
+  // check if this stage has failed
+  const thisStageError = file.assets.find(
+    (a) =>
+      (stage === "stems" && a.asset_type === "stem_piano") ||
+      a.asset_type === stage,
+  )?.error_message;
 
-  // queued/failed/cancelled/empty state
   return (
     <div style={cellStyle}>
-      <span style={statusTextStyle}>{STATUS_TEXT[stageInfo.status]}</span>
-      {stageInfo.canProcess && (
-        <Button
-          kind="ghost"
-          size="sm"
-          hasIconOnly
-          iconDescription={ACTION_BUTTON_TEXT[stage]}
-          renderIcon={PortInput}
-          onClick={() => onProcess(file.id, stage)}
-          style={{ visibility: isRowHovered ? "visible" : "hidden" }}
-        />
-      )}
+      {/* status row */}
+      <div style={statusRowStyle}>
+        <span
+          style={{
+            ...statusTextStyle,
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+          }}
+        >
+          {STATUS_CONFIG[stageInfo.status].icon && (
+            <span style={{ display: "flex", alignItems: "center" }}>
+              {createElement(STATUS_CONFIG[stageInfo.status].icon, {
+                size: 16,
+              })}
+            </span>
+          )}
+          {isThisStageProcessing && file.current_progress && (
+            <span
+              style={{
+                color: "var(--cds-support-info)",
+              }}
+            >
+              {Math.round(file.current_progress.progress * 100)}%
+            </span>
+          )}
+        </span>
+
+        {/* action buttons */}
+        {stageInfo.canDownload && (
+          <IconButton
+            size="sm"
+            kind="tertiary"
+            label={`download ${stage === "stems" ? "piano" : stage === "pdf" ? "sheet music" : stage}`}
+            onClick={() =>
+              onDownload(file.id, stage === "stems" ? "stem_piano" : stage)
+            }
+            style={{ visibility: isRowHovered ? "visible" : "hidden" }}
+          >
+            <Download />
+          </IconButton>
+        )}
+
+        {stageInfo.canProcess && (
+          <IconButton
+            kind="tertiary"
+            size="sm"
+            label={ACTION_BUTTON_TEXT[stage]}
+            onClick={() => onProcess(file.id, stage)}
+            style={{
+              visibility: isRowHovered ? "visible" : "hidden",
+              marginLeft: "-15px",
+            }}
+          >
+            <PortInput />
+          </IconButton>
+        )}
+
+        {/* cancel button - only for the actively processing stage */}
+        {isThisStageProcessing && (
+          <IconButton
+            kind="danger"
+            size="sm"
+            label="cancel"
+            color="var(--cds-text-error)"
+            onClick={() => onCancel(file.id)}
+            style={{ visibility: isRowHovered ? "visible" : "hidden" }}
+          >
+            <StopOutline />
+          </IconButton>
+        )}
+      </div>
     </div>
   );
 };
@@ -271,12 +329,12 @@ export const FileTable = () => {
               </Button>
             </TableToolbarContent>
           </TableToolbar>
-          <Table {...getTableProps()} style={{ width: "100%" }}>
+          <Table {...getTableProps()}>
             <TableHead>
               <TableRow>
                 <TableSelectAll {...getSelectionProps()} />
                 {headers.map((header) => (
-                  <TableHeader key={header.key} {...getHeaderProps({ header })}>
+                  <TableHeader {...getHeaderProps({ header })}>
                     {header.header}
                   </TableHeader>
                 ))}
@@ -312,7 +370,6 @@ export const FileTable = () => {
                         alignItems: "center",
                         justifyContent: "center",
                         width: "100%",
-                        padding: "2rem 0",
                       }}
                     >
                       <p>no audio files yet</p>
