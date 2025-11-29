@@ -23,6 +23,6 @@ create a tool to separate piano from audio files. specifically some [moondog](ht
 
 - [x] upload song
 - [x] separate tracks
-- [ ] handle multiple files, store results
+- [x] handle multiple files, store results
 - [ ] transcribe piano stem to midi
 - [ ] convert midi to sheet music pdf
