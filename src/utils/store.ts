@@ -1,43 +1,25 @@
 import { create } from "zustand";
-import {
-  AppConfig,
-  AppConfigSchema,
-  LoadingState,
-  CurrentView,
-  CurrentStage,
-} from "./schema";
+import { AppConfig, AppConfigSchema, FileWithStatus } from "./schema";
 import { defaultAppConfig } from "./config";
 import { toast } from "./utils";
 
 interface AppStore {
-  currentView: CurrentView;
-  setCurrentView: (view: CurrentView) => void;
-
-  currentStage: CurrentStage;
-  setCurrentStage: (stage: CurrentStage) => void;
+  currentView: "main" | "about" | "error";
+  setCurrentView: (view: "main" | "about" | "error") => void;
 
   appConfig: AppConfig;
   setAppConfig: (config: unknown) => void;
 
-  selectedFilepath: string | null;
-  setSelectedFilepath: (val: string | null) => void;
+  files: FileWithStatus[];
+  setFiles: (files: FileWithStatus[]) => void;
 
-  availableStems: string[];
-  setAvailableStems: (stems: string[]) => void;
-
-  separationProgress: LoadingState | null;
-  setSeparationProgress: (progress: LoadingState | null) => void;
-
-  downloadProgress: LoadingState | null;
-  setDownloadProgress: (progress: LoadingState | null) => void;
+  selectedFileId: string | null;
+  setSelectedFileId: (id: string | null) => void;
 }
 
 export const useStore = create<AppStore>((set) => ({
   currentView: "main",
   setCurrentView: (view) => set({ currentView: view }),
-
-  currentStage: "upload",
-  setCurrentStage: (stage) => set({ currentStage: stage }),
 
   appConfig: defaultAppConfig,
   setAppConfig: (unknownConfig) => {
@@ -59,21 +41,9 @@ export const useStore = create<AppStore>((set) => ({
     }
   },
 
-  selectedFilepath: null,
-  setSelectedFilepath: (val) =>
-    set({
-      selectedFilepath: val,
-      separationProgress: null,
-      downloadProgress: null,
-      availableStems: [],
-    }),
+  files: [],
+  setFiles: (files) => set({ files }),
 
-  availableStems: [],
-  setAvailableStems: (stems) => set({ availableStems: stems }),
-
-  separationProgress: null,
-  setSeparationProgress: (val) => set({ separationProgress: val }),
-
-  downloadProgress: null,
-  setDownloadProgress: (val) => set({ downloadProgress: val }),
+  selectedFileId: null,
+  setSelectedFileId: (id) => set({ selectedFileId: id }),
 }));

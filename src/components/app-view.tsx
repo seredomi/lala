@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { CurrentView } from "../utils/schema";
-import { MainView } from "./views/main/main-view";
+import { MainView } from "./views/main-view";
 import { AboutView } from "./views/about-view";
 import { ErrorView } from "./views/error-view";
 import { useStore } from "../utils/store";
@@ -16,7 +16,7 @@ export const AppView = () => {
   const { currentView } = useStore();
 
   return (
-    <Theme theme="g10">
+    <Theme theme="white">
       <div
         style={{
           overflowY: "auto",
